@@ -869,7 +869,7 @@ impl<State: Send + Sync, Ctx: Send + Sync> AgentHarness<State, Ctx> {
             });
             status.set_last_event(record.id);
             return Ok(ResolvedToolCall::Answered(tinytools::ToolResult::error(
-                detail,
+                unparseable_tool_call_message(&call.name, &detail),
             )));
         }
 
@@ -2339,6 +2339,20 @@ fn repeated_truncated_tool_call_message(tool_name: &str) -> String {
          run. Stop sending `{tool_name}` calls this large: the limit is fixed, and another \
          oversized `{tool_name}` call will end the run. Make the change in several smaller \
          incremental steps, one part per call."
+    )
+}
+
+/// The corrective for a call whose arguments the provider could not parse and
+/// relaxed-JSON repair could not fix. A bare parse error ("expected `,` or `]`
+/// at line 1 column 911") gave the model nothing to act on: production traces
+/// show it re-sending the same large inline document until the failure breaker
+/// halted the run.
+fn unparseable_tool_call_message(tool_name: &str, detail: &str) -> String {
+    format!(
+        "Tool call `{tool_name}` was not run: its arguments are not valid JSON ({detail}). \
+         Re-send it as one well-formed JSON object. If the arguments carry a large document, \
+         do not inline it again: build it in smaller incremental calls (for example with an \
+         editing tool that returns a handle or id) and pass that reference instead."
     )
 }
 

@@ -24,10 +24,12 @@ use tinytools::Tool;
 /// 1. Already a JSON object → leave it (the common, valid case).
 /// 2. A JSON-encoded string (optionally fenced) that decodes to an object →
 ///    decode and use it.
-/// 3. Otherwise a non-object whose tool schema declares **no** required fields →
+/// 3. A call the provider marked invalid (`ToolCall::invalid`) keeps its raw
+///    string, so admission can run its relaxed-JSON repair on it.
+/// 4. Otherwise a non-object whose tool schema declares **no** required fields →
 ///    coerce to `{}` (legacy-engine parity: the tool runs and produces its own
 ///    recoverable error).
-/// 4. Otherwise (non-object + schema has required fields) → leave the arguments
+/// 5. Otherwise (non-object + schema has required fields) → leave the arguments
 ///    untouched so the crate's `InvalidArgsPolicy::ReturnToolError` path reports
 ///    the original validation failure. Coercing to `{}` would discard the raw
 ///    malformed value without improving recovery.
@@ -78,7 +80,19 @@ impl<C: Send + Sync> Middleware<(), C> for ArgRecoveryMiddleware {
             return Ok(());
         }
 
-        // (3) Non-object with a permissive schema (no required fields): coerce to
+        // (3) A call the provider marked unparseable keeps its raw string: admission
+        // runs the relaxed-JSON repair on it next, and otherwise answers with the
+        // parse error. Coercing it to `{}` here destroyed the input that repair
+        // needs while the call was still answered as invalid.
+        if call.invalid.is_some() {
+            tracing::debug!(
+                tool = call.name.as_str(),
+                "[tinyagents::mw] arg_recovery: leaving provider-invalid tool arguments for admission repair"
+            );
+            return Ok(());
+        }
+
+        // (4) Non-object with a permissive schema (no required fields): coerce to
         // `{}` so the tool runs and produces its own recoverable error — engine
         // parity for tools that predate the schema gate.
         let has_required = self
@@ -94,7 +108,7 @@ impl<C: Send + Sync> Middleware<(), C> for ArgRecoveryMiddleware {
             return Ok(());
         }
 
-        // (4) Non-object + schema has required fields: leave untouched. The
+        // (5) Non-object + schema has required fields: leave untouched. The
         // crate admission policy surfaces a descriptive, recoverable tool
         // result without executing the real tool.
         tracing::debug!(

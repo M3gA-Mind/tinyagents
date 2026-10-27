@@ -97,3 +97,13 @@ async fn a_non_object_for_a_schema_with_required_fields_is_left_for_the_crate_ga
 async fn an_unknown_tool_is_treated_as_permissive() {
     assert_eq!(recover("nope", json!(3)).await, json!({}));
 }
+
+#[tokio::test]
+async fn provider_invalid_arguments_keep_their_raw_string_for_admission_repair() {
+    let mut ctx: RunContext = RunContext::new(RunConfig::new("mw-test"), ());
+    let raw = "{query:\"weather\"}";
+    let mut call = ToolCall::invalid("c1", "loose", raw, "key must be a string");
+    mw().before_tool(&mut ctx, &(), &mut call).await.unwrap();
+    assert_eq!(call.arguments, json!(raw));
+    assert!(call.invalid.is_some());
+}
