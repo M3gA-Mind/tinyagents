@@ -3753,9 +3753,12 @@ async fn unrepairable_arguments_are_answered_with_an_actionable_error() {
 
     assert!(tool.calls().is_empty());
     let transcript = format!("{:?}", run.messages);
-    assert!(transcript.contains("invalid JSON arguments"), "{transcript}");
     assert!(
-        transcript.contains("Re-send it as one well-formed JSON object"),
+        transcript.contains("invalid JSON arguments"),
+        "{transcript}"
+    );
+    assert!(
+        transcript.contains("matches the tool's argument schema"),
         "{transcript}"
     );
 }

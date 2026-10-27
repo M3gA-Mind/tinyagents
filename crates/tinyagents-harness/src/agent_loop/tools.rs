@@ -2350,9 +2350,10 @@ fn repeated_truncated_tool_call_message(tool_name: &str) -> String {
 fn unparseable_tool_call_message(tool_name: &str, detail: &str) -> String {
     format!(
         "Tool call `{tool_name}` was not run: its arguments are not valid JSON ({detail}). \
-         Re-send it as one well-formed JSON object. If the arguments carry a large document, \
-         do not inline it again: build it in smaller incremental calls (for example with an \
-         editing tool that returns a handle or id) and pass that reference instead."
+         Re-send it as well-formed JSON that matches the tool's argument schema. If the \
+         arguments carry a large document, do not inline it again: build it in smaller \
+         incremental calls (for example with an editing tool that returns a handle or id) and \
+         pass that reference instead."
     )
 }
 

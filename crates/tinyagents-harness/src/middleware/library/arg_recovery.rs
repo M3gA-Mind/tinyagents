@@ -68,7 +68,9 @@ impl<C: Send + Sync> Middleware<(), C> for ArgRecoveryMiddleware {
         }
 
         // (2) JSON-encoded-string arguments (optionally markdown-fenced): decode
-        // and adopt the inner object.
+        // and adopt the inner object. A provider marks a fenced object invalid,
+        // so the decode also clears that mark; otherwise admission would answer
+        // the now-valid call with the stale parse error.
         if let Some(raw) = call.arguments.as_str()
             && let Some(obj) = recover_object_from_json_string(raw)
         {
@@ -77,6 +79,7 @@ impl<C: Send + Sync> Middleware<(), C> for ArgRecoveryMiddleware {
                 "[tinyagents::mw] arg_recovery: decoded JSON-encoded-string tool arguments to object"
             );
             call.arguments = obj;
+            call.invalid = None;
             return Ok(());
         }
 

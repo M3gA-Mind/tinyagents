@@ -107,3 +107,13 @@ async fn provider_invalid_arguments_keep_their_raw_string_for_admission_repair()
     assert_eq!(call.arguments, json!(raw));
     assert!(call.invalid.is_some());
 }
+
+#[tokio::test]
+async fn a_provider_invalid_fenced_object_is_decoded_and_cleared() {
+    let mut ctx: RunContext = RunContext::new(RunConfig::new("mw-test"), ());
+    let raw = "```json\n{\"q\": \"x\"}\n```";
+    let mut call = ToolCall::invalid("c1", "strict", raw, "expected value");
+    mw().before_tool(&mut ctx, &(), &mut call).await.unwrap();
+    assert_eq!(call.arguments, json!({"q": "x"}));
+    assert!(call.invalid.is_none());
+}
