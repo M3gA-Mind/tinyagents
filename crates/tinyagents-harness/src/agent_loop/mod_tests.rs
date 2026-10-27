@@ -3763,10 +3763,11 @@ async fn unrepairable_arguments_are_answered_with_an_actionable_error() {
     );
 }
 
-/// With the host's `ArgRecoveryMiddleware` installed, an unrepairable call
-/// still reaches admission with its raw string and is answered with the
-/// actionable corrective, word for word: the parse failure plus the re-send
-/// instruction the model can follow.
+/// With the host's `ArgRecoveryMiddleware` installed (as the host stack runs
+/// it), an unrepairable call is not executed and is answered with the
+/// actionable corrective word for word: the parse failure plus the re-send
+/// instruction the model can follow. Pins the wording of
+/// `unparseable_tool_call_message`, not which layer produces it.
 #[tokio::test]
 async fn arg_recovery_keeps_the_actionable_error_text_for_unrepairable_arguments() {
     let tool = Arc::new(crate::testkit::FakeTool::returning("lookup", "found it"));
@@ -3799,7 +3800,8 @@ async fn arg_recovery_keeps_the_actionable_error_text_for_unrepairable_arguments
         "{transcript}"
     );
     assert!(
-        transcript.contains("Re-send it as well-formed JSON that matches the tool's argument schema"),
+        transcript
+            .contains("Re-send it as well-formed JSON that matches the tool's argument schema"),
         "{transcript}"
     );
 }
